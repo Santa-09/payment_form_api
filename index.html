@@ -824,17 +824,26 @@
 
     <!-- JavaScript -->
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', function () {
+        const payeeName = "Payment_Gateway";
+        const currency = "INR";
+
+        const qrElement = document.getElementById('qrcode');
+        const canvas = document.createElement('canvas');
+
+        const coursePrices = {
+            "Web Development": 79,
+            "Data Analysis": 59,
+            "Cyber Security": 99
+        };
+
+        function generateUPILink(amount) {
             const upiId = "9692699132@fam";
-            const payeeName = "Payment_Gateway";
-            const amount = "79";
-            const currency = "INR";
+            return `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${amount}&cu=${currency}`;
+        }
 
-            const upiURL = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${amount}&cu=${currency}`;
-
-            // Generate QR
-            const qrElement = document.getElementById('qrcode');
-            const canvas = document.createElement('canvas');
+        function generateQRCode(upiURL) {
+            qrElement.innerHTML = ''; // clear previous QR
             QRCode.toCanvas(canvas, upiURL, {
                 width: 200,
                 margin: 1,
@@ -850,121 +859,129 @@
                     qrElement.appendChild(canvas);
                 }
             });
+        }
 
-            // Handle Enroll Now button click
-            document.querySelectorAll('.btn-enroll').forEach(button => {
-                button.addEventListener('click', function () {
-                    const selectedCourse = this.dataset.course;
+        // Handle Enroll Now button click
+        document.querySelectorAll('.btn-enroll').forEach(button => {
+            button.addEventListener('click', function () {
+                const selectedCourse = this.dataset.course;
 
-                    // Show payment page and hide landing page
-                    document.getElementById('landing-page').style.display = 'none';
-                    document.getElementById('payment-page').style.display = 'block';
+                // Show payment page and hide landing page
+                document.getElementById('landing-page').style.display = 'none';
+                document.getElementById('payment-page').style.display = 'block';
 
-                    // Auto-check the selected course
-                    const checkbox = document.querySelector(`input[name="courses"][value="${selectedCourse}"]`);
-                    if (checkbox) checkbox.checked = true;
-                });
+                // Auto-check the selected course
+                const checkbox = document.querySelector(`input[name="courses"][value="${selectedCourse}"]`);
+                if (checkbox) checkbox.checked = true;
+
+                // Get amount and generate UPI link
+                const amount = coursePrices[selectedCourse] || 79;
+                const upiURL = generateUPILink(amount);
+
+                // Update QR code and UPI button
+                generateQRCode(upiURL);
+                const upiButton = document.querySelector('.upi-button');
+                upiButton.setAttribute('href', upiURL);
+                upiButton.innerHTML = `<i class="fas fa-mobile-alt"></i> Pay ₹${amount} via UPI Apps`;
             });
+        });
 
-            document.querySelector('.verify-button').addEventListener('click', async function () {
-                const name = document.getElementById('name').value.trim();
-                const regno = document.getElementById('regno').value.trim();
-                const phone = document.getElementById('phone').value.trim();
-                const branch = document.getElementById('branch').value.trim();
-                const transactionId = document.getElementById('transaction-id').value.trim();
-                const courses = Array.from(document.querySelectorAll('input[name="courses"]:checked')).map(el => el.value);
+        // Handle Verify Button
+        document.querySelector('.verify-button').addEventListener('click', async function () {
+            const name = document.getElementById('name').value.trim();
+            const regno = document.getElementById('regno').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const branch = document.getElementById('branch').value.trim();
+            const transactionId = document.getElementById('transaction-id').value.trim();
+            const courses = Array.from(document.querySelectorAll('input[name="courses"]:checked')).map(el => el.value);
 
-                const successMessage = document.getElementById('success-message');
-                const errorMessage = document.getElementById('error-message');
-                const thankYouMessage = document.getElementById('thank-you-message');
+            const successMessage = document.getElementById('success-message');
+            const errorMessage = document.getElementById('error-message');
+            const thankYouMessage = document.getElementById('thank-you-message');
 
-                successMessage.style.display = 'none';
-                errorMessage.style.display = 'none';
-                thankYouMessage.style.display = 'none';
+            successMessage.style.display = 'none';
+            errorMessage.style.display = 'none';
+            thankYouMessage.style.display = 'none';
 
-                // Basic validation
-                if (!name || !regno || !phone || !branch || !transactionId || courses.length === 0) {
-                    showError('Please fill in all required fields.');
-                    return;
-                }
+            if (!name || !regno || !phone || !branch || !transactionId || courses.length === 0) {
+                showError('Please fill in all required fields.');
+                return;
+            }
 
-                // Show loading state
-                const button = this;
-                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
-                button.disabled = true;
+            const button = this;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+            button.disabled = true;
 
-                try {
-                    const result = await submitForm(name, regno, phone, branch, courses, transactionId);
-
-                    if (result.success) {
-                        showSuccess(button);
-                        showThankYouMessage();
-                    } else {
-                        showError(result.message || 'Something went wrong.');
-                        resetButton(button);
-                    }
-                } catch (err) {
-                    console.error(err);
-                    showError('Submission failed. Please try again.');
+            try {
+                const result = await submitForm(name, regno, phone, branch, courses, transactionId);
+                if (result.success) {
+                    showSuccess(button);
+                    showThankYouMessage();
+                } else {
+                    showError(result.message || 'Something went wrong.');
                     resetButton(button);
                 }
+            } catch (err) {
+                console.error(err);
+                showError('Submission failed. Please try again.');
+                resetButton(button);
+            }
+        });
+
+        async function submitForm(name, regno, phone, branch, courses, transactionId) {
+            const scriptURL = "https://script.google.com/macros/s/AKfycbyq9cZmCOYZVppLIAFMKz-24H5UPepyQpu5QSL-NOixovExyBLDebyGFj6z4MS0FJ2e/exec "; // ✅ Replace with your actual URL
+
+            const formData = new URLSearchParams();
+            formData.append("name", name);
+            formData.append("regno", regno);
+            formData.append("phone", phone);
+            formData.append("branch", branch);
+            courses.forEach(course => formData.append("courses", course));
+            formData.append("transaction_id", transactionId);
+
+            const response = await fetch(scriptURL, {
+                method: "POST",
+                body: formData
             });
 
-            async function submitForm(name, regno, phone, branch, courses, transactionId) {
-                const scriptURL = "https://script.google.com/macros/s/AKfycbyq9cZmCOYZVppLIAFMKz-24H5UPepyQpu5QSL-NOixovExyBLDebyGFj6z4MS0FJ2e/exec "; // ✅ Replace with your actual URL
+            return await response.json(); // { success: true/false }
+        }
 
-                const formData = new URLSearchParams();
-                formData.append("name", name);
-                formData.append("regno", regno);
-                formData.append("phone", phone);
-                formData.append("branch", branch);
-                courses.forEach(course => formData.append("courses", course));
-                formData.append("transaction_id", transactionId);
+        function showError(message) {
+            const errorMessage = document.getElementById('error-message');
+            errorMessage.querySelector('p').textContent = message;
+            errorMessage.style.display = 'flex';
+        }
 
-                const response = await fetch(scriptURL, {
-                    method: "POST",
-                    body: formData
-                });
+        function showSuccess(button) {
+            document.getElementById('success-message').style.display = 'flex';
+            button.innerHTML = '<i class="fas fa-check-circle"></i> Submitted!';
+            button.style.background = 'linear-gradient(135deg, #4cc9f0, #3aa8d4)';
+        }
 
-                return await response.json(); // { success: true/false }
-            }
+        function resetButton(button) {
+            button.innerHTML = '<i class="fas fa-check-circle"></i> Submit Again';
+            button.disabled = false;
+            button.style.background = 'linear-gradient(135deg, #3a0ca3, #4361ee)';
+        }
 
-            function showError(message) {
-                const errorMessage = document.getElementById('error-message');
-                errorMessage.querySelector('p').textContent = message;
-                errorMessage.style.display = 'flex';
-            }
+        function showThankYouMessage() {
+            setTimeout(() => {
+                const thankYouMessage = document.getElementById('thank-you-message');
+                thankYouMessage.style.display = 'block';
+                thankYouMessage.scrollIntoView({ behavior: 'smooth' });
+            }, 800);
+        }
 
-            function showSuccess(button) {
-                document.getElementById('success-message').style.display = 'flex';
-                button.innerHTML = '<i class="fas fa-check-circle"></i> Submitted!';
-                button.style.background = 'linear-gradient(135deg, #4cc9f0, #3aa8d4)';
-            }
-
-            function resetButton(button) {
-                button.innerHTML = '<i class="fas fa-check-circle"></i> Submit Again';
-                button.disabled = false;
-                button.style.background = 'linear-gradient(135deg, #3a0ca3, #4361ee)';
-            }
-
-            function showThankYouMessage() {
-                setTimeout(() => {
-                    const thankYouMessage = document.getElementById('thank-you-message');
-                    thankYouMessage.style.display = 'block';
-                    thankYouMessage.scrollIntoView({ behavior: 'smooth' });
-                }, 800);
-            }
-
-            // Reset form fields on page load
-            document.getElementById('name').value = '';
-            document.getElementById('regno').value = '';
-            document.getElementById('phone').value = '';
-            document.getElementById('branch').value = '';
-            document.querySelectorAll('input[name="courses"]').forEach(el => el.checked = false);
-            document.getElementById('transaction-id').value = '';
-        });
-    </script>
-
+        // Reset form fields on load
+        document.getElementById('name').value = '';
+        document.getElementById('regno').value = '';
+        document.getElementById('phone').value = '';
+        document.getElementById('branch').value = '';
+        document.querySelectorAll('input[name="courses"]').forEach(el => el.checked = false);
+        document.getElementById('transaction-id').value = '';
+    });
+</script>
 </body>
 
 </html>
