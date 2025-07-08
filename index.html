@@ -851,6 +851,21 @@
                 }
             });
 
+            // Handle Enroll Now button click
+            document.querySelectorAll('.btn-enroll').forEach(button => {
+                button.addEventListener('click', function () {
+                    const selectedCourse = this.dataset.course;
+
+                    // Show payment page and hide landing page
+                    document.getElementById('landing-page').style.display = 'none';
+                    document.getElementById('payment-page').style.display = 'block';
+
+                    // Auto-check the selected course
+                    const checkbox = document.querySelector(`input[name="courses"][value="${selectedCourse}"]`);
+                    if (checkbox) checkbox.checked = true;
+                });
+            });
+
             document.querySelector('.verify-button').addEventListener('click', async function () {
                 const name = document.getElementById('name').value.trim();
                 const regno = document.getElementById('regno').value.trim();
@@ -896,7 +911,7 @@
             });
 
             async function submitForm(name, regno, phone, branch, courses, transactionId) {
-                const scriptURL = "https://script.google.com/macros/s/AKfycbyq9cZmCOYZVppLIAFMKz-24H5UPepyQpu5QSL-NOixovExyBLDebyGFj6z4MS0FJ2e/exec "; // ✅ Replace with your actual URL
+                const scriptURL = "https://script.google.com/macros/s/YOUR_DEPLOYED_WEB_APP_URL/exec"; // ✅ Replace with your actual URL
 
                 const formData = new URLSearchParams();
                 formData.append("name", name);
@@ -949,6 +964,7 @@
             document.getElementById('transaction-id').value = '';
         });
     </script>
+
 </body>
 
 </html>
