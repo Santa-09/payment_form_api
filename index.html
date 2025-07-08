@@ -652,22 +652,17 @@
 
     <!-- JavaScript -->
     <script>
-        // Generate UPI QR Code
         document.addEventListener('DOMContentLoaded', function () {
-            // UPI Payment Details
             const upiId = "9692699132@fam";
             const payeeName = "Payment_Gateway";
             const amount = "79";
             const currency = "INR";
-            const redirectDelay = 3000; // 3 seconds before redirect
 
-            // Generate UPI payment URL
             const upiURL = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${amount}&cu=${currency}`;
 
-            // Generate QR Code
+            // Generate QR
             const qrElement = document.getElementById('qrcode');
             const canvas = document.createElement('canvas');
-
             QRCode.toCanvas(canvas, upiURL, {
                 width: 200,
                 margin: 1,
@@ -678,22 +673,12 @@
             }, function (error) {
                 if (error) {
                     console.error('QR Code Error:', error);
-                    qrElement.innerHTML = '<p style="color:var(--danger)">Error generating QR code. Please refresh.</p>';
+                    qrElement.innerHTML = '<p style="color:red">Error generating QR code. Please refresh.</p>';
                 } else {
                     qrElement.appendChild(canvas);
                 }
             });
 
-            // Strict UPI Transaction ID validation patterns
-            const upiTransactionPatterns = [
-                /^[A-Z0-9]{8,20}$/i,
-                /^[A-Z]{3}[0-9]{10,15}$/i,
-                /^[0-9]{12,16}$/,
-                /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/i,
-                /^UPI[A-Z0-9]{9,15}$/i
-            ];
-
-            // Payment verification handler
             document.querySelector('.verify-button').addEventListener('click', async function () {
                 const name = document.getElementById('name').value.trim();
                 const regno = document.getElementById('regno').value.trim();
@@ -701,87 +686,52 @@
                 const branch = document.getElementById('branch').value.trim();
                 const transactionId = document.getElementById('transaction-id').value.trim();
                 const courses = Array.from(document.querySelectorAll('input[name="courses"]:checked')).map(el => el.value);
+
                 const successMessage = document.getElementById('success-message');
                 const errorMessage = document.getElementById('error-message');
                 const thankYouMessage = document.getElementById('thank-you-message');
 
-                // Hide any previous messages
                 successMessage.style.display = 'none';
                 errorMessage.style.display = 'none';
                 thankYouMessage.style.display = 'none';
 
-                // Validate inputs
-                if (!name) {
-                    showError('Please enter your name');
-                    return;
-                }
-
-                if (!regno) {
-                    showError('Please enter your registration number');
-                    return;
-                }
-
-                if (!phone || !/^[0-9]{10}$/.test(phone)) {
-                    showError('Please enter a valid 10-digit phone number');
-                    return;
-                }
-
-                if (!branch) {
-                    showError('Please enter your branch');
-                    return;
-                }
-
-                if (courses.length === 0) {
-                    showError('Please select at least one course');
-                    return;
-                }
-
-                if (!transactionId) {
-                    showError('Please enter your UPI transaction ID');
-                    return;
-                }
-
-                // Strict UPI transaction ID validation
-                const isValidUpiId = upiTransactionPatterns.some(pattern => pattern.test(transactionId));
-
-                if (!isValidUpiId) {
-                    showError('Invalid UPI transaction ID format');
+                // Basic validation
+                if (!name || !regno || !phone || !branch || !transactionId || courses.length === 0) {
+                    showError('Please fill in all required fields.');
                     return;
                 }
 
                 // Show loading state
                 const button = this;
-                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
                 button.disabled = true;
 
                 try {
-                    // Simulate verification (replace with actual API call)
-                    const verificationResult = await verifyPayment(name, regno, phone, branch, courses, transactionId);
+                    const result = await submitForm(name, regno, phone, branch, courses, transactionId);
 
-                    if (verificationResult.success) {
-                        // Success case
+                    if (result.success) {
                         showSuccess(button);
                         showThankYouMessage();
                     } else {
-                        showVerificationError(button, verificationResult.message || 'Transaction ID not found');
+                        showError(result.message || 'Something went wrong.');
+                        resetButton(button);
                     }
-                } catch (error) {
-                    showVerificationError(button, 'Verification failed. Please try again.');
-                    console.error('Verification error:', error);
+                } catch (err) {
+                    console.error(err);
+                    showError('Submission failed. Please try again.');
+                    resetButton(button);
                 }
             });
 
-            // Simulated payment verification (replace with real API call)
-            // ✅ REAL Google Apps Script call
-            async function verifyPayment(name, regno, phone, branch, courses, transactionId) {
-                const scriptURL = "https://script.google.com/macros/s/AKfycbyq9cZmCOYZVppLIAFMKz-24H5UPepyQpu5QSL-NOixovExyBLDebyGFj6z4MS0FJ2e/exec"; // 👈 Replace this with your real URL
+            async function submitForm(name, regno, phone, branch, courses, transactionId) {
+                const scriptURL = "https://script.google.com/macros/s/AKfycbyq9cZmCOYZVppLIAFMKz-24H5UPepyQpu5QSL-NOixovExyBLDebyGFj6z4MS0FJ2e/exec "; // ✅ Replace with your actual URL
 
                 const formData = new URLSearchParams();
                 formData.append("name", name);
                 formData.append("regno", regno);
                 formData.append("phone", phone);
                 formData.append("branch", branch);
-                courses.forEach(course => formData.append("courses", course)); // Send as array
+                courses.forEach(course => formData.append("courses", course));
                 formData.append("transaction_id", transactionId);
 
                 const response = await fetch(scriptURL, {
@@ -789,9 +739,8 @@
                     body: formData
                 });
 
-                return await response.json(); // Returns { success: true/false, message: "..." }
+                return await response.json(); // { success: true/false }
             }
-
 
             function showError(message) {
                 const errorMessage = document.getElementById('error-message');
@@ -800,31 +749,26 @@
             }
 
             function showSuccess(button) {
-                button.innerHTML = '<i class="fas fa-check-circle"></i> Verified!';
                 document.getElementById('success-message').style.display = 'flex';
+                button.innerHTML = '<i class="fas fa-check-circle"></i> Submitted!';
                 button.style.background = 'linear-gradient(135deg, #4cc9f0, #3aa8d4)';
+            }
+
+            function resetButton(button) {
+                button.innerHTML = '<i class="fas fa-check-circle"></i> Submit Again';
+                button.disabled = false;
+                button.style.background = 'linear-gradient(135deg, #3a0ca3, #4361ee)';
             }
 
             function showThankYouMessage() {
                 setTimeout(() => {
                     const thankYouMessage = document.getElementById('thank-you-message');
                     thankYouMessage.style.display = 'block';
-
-                    // Scroll to the thank you message
                     thankYouMessage.scrollIntoView({ behavior: 'smooth' });
-                }, 1000);
+                }, 800);
             }
 
-            function showVerificationError(button, message) {
-                document.getElementById('error-message').querySelector('p').textContent = message;
-                document.getElementById('error-message').style.display = 'flex';
-
-                button.innerHTML = '<i class="fas fa-check-circle"></i> Verify Payment';
-                button.disabled = false;
-                button.style.background = 'linear-gradient(135deg, #3a0ca3, #4361ee)';
-            }
-
-            // Reset form on page load
+            // Reset form fields on page load
             document.getElementById('name').value = '';
             document.getElementById('regno').value = '';
             document.getElementById('phone').value = '';
@@ -833,6 +777,7 @@
             document.getElementById('transaction-id').value = '';
         });
     </script>
+
 </body>
 
 </html>
