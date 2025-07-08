@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Gateway</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+    <style>
+        :root {
+            --primary: #4361ee;
+            --primary-dark: #3a56d4;
+            --secondary: #3f37c9;
+            --accent: #4895ef;
+            --danger: #f72585;
+            --success: #4cc9f0;
+            --gray: #adb5bd;
+            --light: #f8f9fa;
+            --dark: #212529;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fa;
+            color: var(--dark);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .btn-primary {
+            display: inline-block;
+            background-color: var(--primary);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 20px;
+        }
+
+        /* Payment Container */
+        .payment-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            padding: 3rem;
+            margin: 2rem 0;
+        }
+
+        .payment-header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .payment-header h3 {
+            font-size: 2.2rem;
+            margin-bottom: 1rem;
+            color: var(--dark);
+        }
+
+        .payment-header p {
+            color: var(--gray);
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .payment-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        /* QR Section */
+        .qr-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .qr-container {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .qr-container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .qr-placeholder {
+            background-color: white;
+            width: 220px;
+            height: 220px;
+            margin: 0 auto 1.5rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .qr-placeholder canvas {
+            width: 100%;
+            height: 100%;
+            padding: 10px;
+        }
+
+        .payment-options {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .payment-option {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.8rem 1.2rem;
+            border-radius: 8px;
+            background: white;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            transition: all 0.3s;
+            min-width: 80px;
+        }
+
+        .payment-option:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .payment-option i {
+            font-size: 1.8rem;
+            color: var(--dark);
+        }
+
+        .payment-option span {
+            font-size: 0.85rem;
+            color: var(--gray);
+            font-weight: 500;
+        }
+
+        .upi-redirect {
+            margin: 1.5rem 0;
+            text-align: center;
+            color: var(--gray);
+            font-size: 0.9rem;
+            position: relative;
+        }
+
+        .upi-redirect::before,
+        .upi-redirect::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            width: 30%;
+            height: 1px;
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .upi-redirect::before {
+            left: 0;
+        }
+
+        .upi-redirect::after {
+            right: 0;
+        }
+
+        .upi-button {
+            display: inline-block;
+            padding: 0.8rem 1.5rem;
+            background: linear-gradient(135deg, #3a0ca3 0%, #4361ee 100%);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            box-shadow: 0 4px 10px rgba(67, 97, 238, 0.3);
+        }
+
+        .upi-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(67, 97, 238, 0.4);
+            background: linear-gradient(135deg, #3a0ca3 0%, #3a56d4 100%);
+        }
+
+        /* Transaction Form */
+        .transaction-form {
+            width: 100%;
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .transaction-form:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.8rem;
+            font-weight: 500;
+            color: var(--dark);
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.9rem 1.2rem;
+            background-color: white;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            color: var(--dark);
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+        }
+
+        .form-group input::placeholder {
+            color: var(--gray);
+        }
+
+        .help-text {
+            font-size: 0.8rem;
+            color: var(--gray);
+            margin-top: 0.5rem;
+            display: block;
+        }
+
+        .verify-button {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, #3a0ca3 0%, #4361ee 100%);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            box-shadow: 0 4px 10px rgba(67, 97, 238, 0.3);
+        }
+
+        .verify-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(67, 97, 238, 0.4);
+            background: linear-gradient(135deg, #3a0ca3 0%, #3a56d4 100%);
+        }
+
+        .verify-button:active {
+            transform: translateY(1px);
+        }
+
+        /* Checkbox Styles */
+        .checkbox-group {
+            margin: 1.5rem 0;
+        }
+
+        .checkbox-group label {
+            display: block;
+            margin-bottom: 1rem;
+            font-weight: 500;
+            color: var(--dark);
+        }
+
+        .checkbox-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--gray);
+            border-radius: 4px;
+            margin-right: 0.5rem;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .checkbox-item input[type="checkbox"]:checked {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .checkbox-item input[type="checkbox"]:checked::after {
+            content: "\f00c";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            color: white;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 12px;
+        }
+
+        .checkbox-item label {
+            margin-bottom: 0;
+            cursor: pointer;
+            font-weight: 400;
+        }
+
+        /* Status Messages */
+        .status-message {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1.5rem;
+            display: none;
+            align-items: center;
+            gap: 0.8rem;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .status-message i {
+            font-size: 1.2rem;
+        }
+
+        .success-message {
+            background-color: rgba(76, 201, 240, 0.1);
+            border-left: 4px solid var(--success);
+        }
+
+        .error-message {
+            background-color: rgba(247, 37, 133, 0.1);
+            border-left: 4px solid var(--danger);
+        }
+
+        /* Thank You Message */
+        .thank-you-message {
+            background-color: rgba(76, 201, 240, 0.1);
+            border-left: 4px solid var(--success);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-top: 1.5rem;
+            display: none;
+            text-align: center;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .thank-you-message i {
+            font-size: 2rem;
+            color: var(--success);
+            margin-bottom: 1rem;
+        }
+
+        .thank-you-message h4 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--dark);
+        }
+
+        .thank-you-message p {
+            color: var(--dark);
+            line-height: 1.6;
+        }
+
+        /* Payment Notice */
+        .payment-notice {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 2.5rem;
+            padding: 1.2rem;
+            background-color: rgba(67, 97, 238, 0.08);
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .payment-notice i {
+            color: var(--primary);
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .payment-notice p {
+            color: var(--dark);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        /* Footer */
+        footer {
+            background: var(--dark);
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+            margin-top: auto;
+        }
+
+        .copyright {
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .payment-grid {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+
+            .payment-container {
+                padding: 2rem;
+            }
+
+            .payment-header h3 {
+                font-size: 1.8rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .payment-container {
+                padding: 1.5rem;
+            }
+
+            .payment-header h3 {
+                font-size: 1.5rem;
+            }
+
+            .payment-header p {
+                font-size: 1rem;
+            }
+
+            .qr-container,
+            .transaction-form {
+                padding: 1.5rem;
+            }
+
+            .payment-options {
+                gap: 0.8rem;
+            }
+
+            .payment-option {
+                padding: 0.6rem 0.8rem;
+                min-width: 70px;
+            }
+
+            .payment-option i {
+                font-size: 1.5rem;
+            }
+
+            .checkbox-container {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Payment Container -->
+    <div class="container">
+        <div class="payment-container">
+            <div class="payment-header">
+                <h3>Complete Your Payment</h3>
+                <p>Scan the QR code to make payment and enter your details below to verify your payment</p>
+            </div>
+
+            <div class="payment-grid">
+                <!-- QR Code Section -->
+                <div class="qr-section">
+                    <div class="qr-container">
+                        <div class="qr-placeholder" id="qrcode"></div>
+                        <div class="payment-options">
+                            <div class="payment-option">
+                                <i class="fab fa-google-pay"></i>
+                                <span>Google Pay</span>
+                            </div>
+                            <div class="payment-option">
+                                <i class="fab fa-paypal"></i>
+                                <span>PayPal</span>
+                            </div>
+                            <div class="payment-option">
+                                <i class="fas fa-credit-card"></i>
+                                <span>UPI</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="upi-redirect">or</div>
+                    <a href="upi://pay?pa=9692699132@fam&pn=Payment_Gateway&am=79&cu=INR" class="upi-button">
+                        <i class="fas fa-mobile-alt"></i> Pay via UPI Apps
+                    </a>
+                </div>
+
+                <!-- Transaction Form Section -->
+                <div class="transaction-section">
+                    <div class="transaction-form">
+                        <div class="form-group">
+                            <label for="name">Name</label>
+                            <input type="text" id="name" name="name" placeholder="Enter your name" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="regno">Registration Number</label>
+                            <input type="text" id="regno" name="regno" placeholder="Enter your registration number"
+                                required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="phone">Phone Number</label>
+                            <input type="tel" id="phone" name="phone" placeholder="Enter your phone number" required>
+                            <span class="help-text">We'll send payment confirmation to this number</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="branch">Branch</label>
+                            <input type="text" id="branch" name="branch" placeholder="Enter your branch name" required>
+                        </div>
+
+                        <div class="checkbox-group">
+                            <label>Select Course(s)</label>
+                            <div class="checkbox-container">
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="webdev" name="courses" value="Web Development">
+                                    <label for="webdev">Web Development</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="data-analysis" name="courses" value="Data Analysis">
+                                    <label for="data-analysis">Data Analysis</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="cybersecurity" name="courses" value="Cyber Security">
+                                    <label for="cybersecurity">Cyber Security</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="transaction-id">Transaction ID</label>
+                            <input type="text" id="transaction-id" name="transaction_id"
+                                placeholder="Enter your payment transaction ID" required>
+                            <span class="help-text">You'll find this in your payment receipt or bank statement</span>
+                        </div>
+
+                        <button type="button" class="verify-button">
+                            <i class="fas fa-check-circle"></i> Verify Payment
+                        </button>
+
+                        <div class="status-message success-message" id="success-message">
+                            <i class="fas fa-check-circle"></i>
+                            <div>
+                                <strong>Payment Verified!</strong>
+                                <p>Your payment has been successfully verified.</p>
+                            </div>
+                        </div>
+
+                        <div class="status-message error-message" id="error-message">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <div>
+                                <strong>Verification Failed</strong>
+                                <p>Please check your details and try again.</p>
+                            </div>
+                        </div>
+
+                        <div class="thank-you-message" id="thank-you-message">
+                            <i class="fas fa-check-circle"></i>
+                            <h4>Thank You!</h4>
+                            <p>Your response has been submitted successfully. If the project is not delivered, your
+                                money will be refunded.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="payment-notice">
+                <i class="fas fa-info-circle"></i>
+                <p>Your payment will be processed only after verification. This may take up to 24 hours. For immediate
+                    assistance, please contact support.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p class="copyright">© 2025 Payment Gateway. All rights reserved.</p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // Generate UPI QR Code
+        document.addEventListener('DOMContentLoaded', function () {
+            // UPI Payment Details
+            const upiId = "9692699132@fam";
+            const payeeName = "Payment_Gateway";
+            const amount = "79";
+            const currency = "INR";
+            const redirectDelay = 3000; // 3 seconds before redirect
+
+            // Generate UPI payment URL
+            const upiURL = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${amount}&cu=${currency}`;
+
+            // Generate QR Code
+            const qrElement = document.getElementById('qrcode');
+            const canvas = document.createElement('canvas');
+
+            QRCode.toCanvas(canvas, upiURL, {
+                width: 200,
+                margin: 1,
+                color: {
+                    dark: '#000000',
+                    light: '#ffffff'
+                }
+            }, function (error) {
+                if (error) {
+                    console.error('QR Code Error:', error);
+                    qrElement.innerHTML = '<p style="color:var(--danger)">Error generating QR code. Please refresh.</p>';
+                } else {
+                    qrElement.appendChild(canvas);
+                }
+            });
+
+            // Strict UPI Transaction ID validation patterns
+            const upiTransactionPatterns = [
+                /^[A-Z0-9]{8,20}$/i,
+                /^[A-Z]{3}[0-9]{10,15}$/i,
+                /^[0-9]{12,16}$/,
+                /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/i,
+                /^UPI[A-Z0-9]{9,15}$/i
+            ];
+
+            // Payment verification handler
+            document.querySelector('.verify-button').addEventListener('click', async function () {
+                const name = document.getElementById('name').value.trim();
+                const regno = document.getElementById('regno').value.trim();
+                const phone = document.getElementById('phone').value.trim();
+                const branch = document.getElementById('branch').value.trim();
+                const transactionId = document.getElementById('transaction-id').value.trim();
+                const courses = Array.from(document.querySelectorAll('input[name="courses"]:checked')).map(el => el.value);
+                const successMessage = document.getElementById('success-message');
+                const errorMessage = document.getElementById('error-message');
+                const thankYouMessage = document.getElementById('thank-you-message');
+
+                // Hide any previous messages
+                successMessage.style.display = 'none';
+                errorMessage.style.display = 'none';
+                thankYouMessage.style.display = 'none';
+
+                // Validate inputs
+                if (!name) {
+                    showError('Please enter your name');
+                    return;
+                }
+
+                if (!regno) {
+                    showError('Please enter your registration number');
+                    return;
+                }
+
+                if (!phone || !/^[0-9]{10}$/.test(phone)) {
+                    showError('Please enter a valid 10-digit phone number');
+                    return;
+                }
+
+                if (!branch) {
+                    showError('Please enter your branch');
+                    return;
+                }
+
+                if (courses.length === 0) {
+                    showError('Please select at least one course');
+                    return;
+                }
+
+                if (!transactionId) {
+                    showError('Please enter your UPI transaction ID');
+                    return;
+                }
+
+                // Strict UPI transaction ID validation
+                const isValidUpiId = upiTransactionPatterns.some(pattern => pattern.test(transactionId));
+
+                if (!isValidUpiId) {
+                    showError('Invalid UPI transaction ID format');
+                    return;
+                }
+
+                // Show loading state
+                const button = this;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
+                button.disabled = true;
+
+                try {
+                    // Simulate verification (replace with actual API call)
+                    const verificationResult = await verifyPayment(name, regno, phone, branch, courses, transactionId);
+
+                    if (verificationResult.success) {
+                        // Success case
+                        showSuccess(button);
+                        showThankYouMessage();
+                    } else {
+                        showVerificationError(button, verificationResult.message || 'Transaction ID not found');
+                    }
+                } catch (error) {
+                    showVerificationError(button, 'Verification failed. Please try again.');
+                    console.error('Verification error:', error);
+                }
+            });
+
+            // Simulated payment verification (replace with real API call)
+            // ✅ REAL Google Apps Script call
+            async function verifyPayment(name, regno, phone, branch, courses, transactionId) {
+                const scriptURL = "https://script.google.com/macros/s/YOUR_DEPLOYED_WEB_APP_URL/exec"; // 👈 Replace this with your real URL
+
+                const formData = new URLSearchParams();
+                formData.append("name", name);
+                formData.append("regno", regno);
+                formData.append("phone", phone);
+                formData.append("branch", branch);
+                courses.forEach(course => formData.append("courses", course)); // Send as array
+                formData.append("transaction_id", transactionId);
+
+                const response = await fetch(scriptURL, {
+                    method: "POST",
+                    body: formData
+                });
+
+                return await response.json(); // Returns { success: true/false, message: "..." }
+            }
+
+
+            function showError(message) {
+                const errorMessage = document.getElementById('error-message');
+                errorMessage.querySelector('p').textContent = message;
+                errorMessage.style.display = 'flex';
+            }
+
+            function showSuccess(button) {
+                button.innerHTML = '<i class="fas fa-check-circle"></i> Verified!';
+                document.getElementById('success-message').style.display = 'flex';
+                button.style.background = 'linear-gradient(135deg, #4cc9f0, #3aa8d4)';
+            }
+
+            function showThankYouMessage() {
+                setTimeout(() => {
+                    const thankYouMessage = document.getElementById('thank-you-message');
+                    thankYouMessage.style.display = 'block';
+
+                    // Scroll to the thank you message
+                    thankYouMessage.scrollIntoView({ behavior: 'smooth' });
+                }, 1000);
+            }
+
+            function showVerificationError(button, message) {
+                document.getElementById('error-message').querySelector('p').textContent = message;
+                document.getElementById('error-message').style.display = 'flex';
+
+                button.innerHTML = '<i class="fas fa-check-circle"></i> Verify Payment';
+                button.disabled = false;
+                button.style.background = 'linear-gradient(135deg, #3a0ca3, #4361ee)';
+            }
+
+            // Reset form on page load
+            document.getElementById('name').value = '';
+            document.getElementById('regno').value = '';
+            document.getElementById('phone').value = '';
+            document.getElementById('branch').value = '';
+            document.querySelectorAll('input[name="courses"]').forEach(el => el.checked = false);
+            document.getElementById('transaction-id').value = '';
+        });
+    </script>
+</body>
+
+</html>
